@@ -27,6 +27,10 @@ npm test         # engine tests (Node 18+)
 
 Deploy by uploading the folder to any static host (Netlify, GitHub Pages). Bump `CACHE` in `sw.js` whenever a cached file changes so installed copies update.
 
+## Look
+
+The "Platinum" colourway of the Brevista kit: light grey ground, white panels, purple and amber as accents (amber is the gauge needle only). Barlow Condensed for headings and numerals, Montserrat for body text. In dark mode it switches to the plum ground with white text. Fonts load from Google Fonts and are cached by the service worker after first load; the system fallback is used until then.
+
 ## Layout
 
 | Path | Purpose |

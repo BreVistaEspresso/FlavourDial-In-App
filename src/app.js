@@ -172,14 +172,54 @@ function dialView() {
 
 const TYPE_LABEL = { grind: 'Grind', yield: 'Shot length', prep: 'Puck prep', revert: 'Grind', hold: 'Done' };
 
+// Needle position on the sour-bitter gauge, -1 (sour) to +1 (bitter). Mixed or balanced reads centre;
+// the channeling banner explains mixed.
+function gaugePos(r) {
+  if (r.dir !== 'under' && r.dir !== 'over') return 0;
+  const strength = r.dir === 'under' ? r.taste.under : r.taste.over;
+  const mag = Math.min(1, 0.45 + 0.2 * strength);
+  return r.dir === 'under' ? -mag : mag;
+}
+
+function gaugeSvg(r) {
+  const pos = gaugePos(r);
+  let ticks = '';
+  for (let a = 180; a >= 0; a -= 15) {
+    const rad = (a * Math.PI) / 180;
+    const r1 = a % 45 === 0 ? 78 : 84;
+    ticks += `<line x1="${(130 + r1 * Math.cos(rad)).toFixed(1)}" y1="${(130 - r1 * Math.sin(rad)).toFixed(1)}" x2="${(130 + 92 * Math.cos(rad)).toFixed(1)}" y2="${(130 - 92 * Math.sin(rad)).toFixed(1)}"/>`;
+  }
+  const reading = pos < 0 ? 'sour' : pos > 0 ? 'bitter' : r.channeling ? 'sour and bitter together' : 'balanced';
+  return `
+    <svg class="gauge" viewBox="0 0 260 158" role="img" aria-label="Gauge: the shot reads ${reading}, the target is balanced">
+      <path class="track" d="M30 130 A100 100 0 0 1 230 130" fill="none" stroke-width="12" stroke-linecap="round"/>
+      <path class="zone" d="M104 37.5 A100 100 0 0 1 156 37.5" fill="none" stroke-width="12"/>
+      <g class="tk" stroke-width="2">${ticks}</g>
+      <g class="needle" style="transform: rotate(${(pos * 75).toFixed(0)}deg)">
+        <line x1="130" y1="130" x2="130" y2="44" stroke="#F59E0B" stroke-width="4" stroke-linecap="round"/>
+      </g>
+      <circle cx="130" cy="130" r="9" fill="#F59E0B"/><circle cx="130" cy="130" r="3.5" fill="#2A1632"/>
+      <text x="22" y="150">SOUR</text>
+      <text x="130" y="22" text-anchor="middle">BALANCED</text>
+      <text x="238" y="150" text-anchor="end">BITTER</text>
+    </svg>`;
+}
+
 function resultView() {
   const r = state.result;
-  const timeTxt = r.timeStatus === 'unknown' ? 'no time' : `${r.timeStatus === 'in' ? 'in range' : r.timeStatus}`;
+  const t = state.pending?.shot.time;
+  const timeTxt = Number.isFinite(t) ? `${Math.round(t * 10) / 10}<i>s</i>` : '–';
   return `
     <section class="card result" id="result" aria-live="polite">
-      <div class="row"><h2>Next move</h2>
-        <span class="pill">1:${r.ratio.toFixed(1)}</span><span class="pill">${esc(timeTxt)}</span></div>
+      <div class="rule"></div>
+      <h2>Next move</h2>
       ${r.channeling ? '<p class="banner">Channeling is likely: water is bypassing part of the puck.</p>' : ''}
+      ${gaugeSvg(r)}
+      <div class="bezel">
+        <div><small>Time</small><b>${timeTxt}</b></div>
+        <div><small>Window</small><b>${Math.round(r.window.lo)}–${Math.round(r.window.hi)}</b></div>
+        <div><small>Ratio</small><b>1:${r.ratio.toFixed(1)}</b></div>
+      </div>
       <div class="primary">
         <span class="tag">${TYPE_LABEL[r.primary.type]}</span>
         <h3>${esc(r.primary.headline)}</h3>

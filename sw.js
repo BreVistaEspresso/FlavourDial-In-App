@@ -1,5 +1,5 @@
 // Offline app shell. Bump CACHE when any cached file changes so installed copies update.
-const CACHE = 'brevista-dialin-v2';
+const CACHE = 'brevista-dialin-v3';
 const SHELL = [
   './',
   './index.html',
@@ -29,14 +29,17 @@ self.addEventListener('activate', (event) => {
 // Cache-first for same-origin GETs, falling back to the network (and caching it).
 self.addEventListener('fetch', (event) => {
   const req = event.request;
-  if (req.method !== 'GET' || new URL(req.url).origin !== self.location.origin) return;
+  const url = new URL(req.url);
+  const fonts = url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com';
+  if (req.method !== 'GET' || (url.origin !== self.location.origin && !fonts)) return;
   event.respondWith(
     caches.match(req).then((hit) => hit || fetch(req).then((res) => {
-      if (res.ok) {
+      // Font files come back opaque (no-cors), so cache those too. The app still works without them.
+      if (res.ok || (fonts && res.type === 'opaque')) {
         const copy = res.clone();
         caches.open(CACHE).then((c) => c.put(req, copy));
       }
       return res;
-    }).catch(() => caches.match('./index.html'))),
+    }).catch(() => (req.mode === 'navigate' ? caches.match('./index.html') : Response.error()))),
   );
 });
