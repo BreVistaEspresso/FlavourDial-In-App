@@ -1,0 +1,11 @@
+{
+  "name": "flavourdial-in-app",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "description": "BreVista Studio: flavor-driven espresso dial-in PWA",
+  "scripts": {
+    "test": "node --test test/",
+    "start": "python3 -m http.server 8080"
+  }
+}
