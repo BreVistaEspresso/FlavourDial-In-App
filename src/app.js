@@ -232,6 +232,12 @@ function resultView() {
     </section>`;
 }
 
+function miniMeter(dir) {
+  const at = dir === 'under' ? 14 : dir === 'over' ? 86 : 50;
+  const word = dir === 'under' ? 'Leaning sour' : dir === 'over' ? 'Leaning bitter' : 'Balanced or mixed';
+  return `<div class="mini" role="img" aria-label="${word}"><div class="mini-track"><i class="mini-zone"></i><i class="mini-mark" style="left:${at}%"></i></div><div class="mini-labels"><span>Sour</span><span>Balanced</span><span>Bitter</span></div></div>`;
+}
+
 function logView() {
   const h = state.history;
   return `
@@ -240,18 +246,19 @@ function logView() {
         ${h.length ? `<button type="button" class="link" data-action="export">Export JSON</button>
         <button type="button" class="link danger" data-action="clear-log">${state.confirmClear ? 'Tap again to delete all' : 'Clear'}</button>` : ''}
       </div>
-      ${h.length === 0 ? '<p class="muted">No shots yet. Save a diagnosed shot to start your log.</p>' : h.map((e) => `
+      ${h.length === 0 ? '<p class="muted">No shots yet. Save a diagnosed shot to start your log.</p>' : `<div class="entries">${h.map((e) => `
         <article class="entry">
-          <div class="row"><strong>${esc(e.coffee || 'Untitled coffee')}${e.roaster ? ` · ${esc(e.roaster)}` : ''}</strong><span class="muted small">${new Date(e.ts).toLocaleString()}</span></div>
-          <div class="stats">
-            <span class="pill">1:${(e.ratio || 0).toFixed(1)}</span>
-            <span class="pill">grind ${e.grind ?? '–'}</span>
-            <span class="pill">${e.time ?? '–'}s</span>
-            <span class="pill">${e.dose}g → ${e.yield}g</span>
+          <div class="entry-head"><h3>${esc(e.coffee || 'Untitled coffee')}</h3><span class="muted small">${e.roaster ? `${esc(e.roaster)} · ` : ''}${new Date(e.ts).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}, ${new Date(e.ts).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}</span></div>
+          ${miniMeter(e.dir)}
+          <div class="bezel">
+            <div><small>Time</small><b>${e.time ?? '–'}<i>s</i></b></div>
+            <div><small>Ratio</small><b>1:${(e.ratio || 0).toFixed(1)}</b></div>
+            <div><small>Grind</small><b>${e.grind ?? '–'}</b></div>
           </div>
+          <p class="muted small dose">${e.dose}g in → ${e.yield}g out</p>
           <div class="chips small">${e.notes.map((n) => `<span class="chip static">${esc(cap(n))}</span>`).join('')}</div>
-          <p class="muted small">Advice: ${esc(e.top)}</p>
-        </article>`).join('')}
+          <p class="advice"><span class="tag">Advice</span> ${esc(e.top)}</p>
+        </article>`).join('')}</div>`}
     </section>`;
 }
 
@@ -260,7 +267,7 @@ function render() {
     <button type="button" class="navbtn" data-action="view" data-value="${state.view === 'log' ? 'dial' : 'log'}">${state.view === 'log' ? 'Back to dial-in' : `Logbook${state.history.length ? ` (${state.history.length})` : ''}`}</button>
     <button type="button" class="navbtn" aria-label="Grinder settings" data-action="view" data-value="${state.view === 'setup' ? 'dial' : 'setup'}">Grinder</button>`;
   root.innerHTML = `
-    <header class="top"><div class="brand"><img src="icons/icon.svg" alt="" width="28" height="28"><span>BreVista <b>Studio</b></span></div><nav>${nav}</nav></header>
+    <header class="top"><div class="brand"><img src="icons/icon.svg" alt="" width="28" height="28"><span>Flavour <b>Dial-In</b></span></div><div class="studio">BreVista Studio</div><nav>${nav}</nav></header>
     <main>${state.view === 'setup' ? setupView() : state.view === 'log' ? logView() : dialView()}</main>
     <div id="toast" class="toast" role="status" hidden></div>`;
 }
