@@ -1,6 +1,6 @@
 import {
   TASTE,
-  STARTING_RATIO,
+  startRatio,
   balancedNotes,
   diagnose,
   nextShotFrom,
@@ -28,11 +28,11 @@ state.form = freshForm();
 if (!state.profile.onboarded) state.view = 'setup';
 
 function freshForm(over = {}) {
-  const ratio = state.profile.prefRatio || STARTING_RATIO;
+  const roast = over.roast || 'medium';
   const dose = 18;
   return {
-    roaster: '', coffee: '', roast: 'medium', dose, yield: Math.round(dose * ratio * 2) / 2,
-    grind: '', time: '', temp: 'fixed', prep: 'wdt_tamp', screen: false, ...over,
+    roaster: '', coffee: '', roast, dose, yield: Math.round(dose * startRatio(state.profile, roast) * 2) / 2,
+    grind: '', time: '', temp: 'fixed', prep: 'wdt_tamp', screen: false, fill: 'unchecked', ...over,
   };
 }
 
@@ -49,7 +49,7 @@ function readShot() {
   const f = state.form;
   return {
     dose: num(f.dose), yield: num(f.yield), grind: num(f.grind), time: num(f.time),
-    roast: f.roast, prep: f.prep, screen: f.screen, temp: f.temp, notes: [...state.notes],
+    roast: f.roast, prep: f.prep, screen: f.screen, temp: f.temp, fill: f.fill, notes: [...state.notes],
   };
 }
 
@@ -60,6 +60,13 @@ const GRINDERS = [
   ['stepless', 'Stepless', 'Continuous dial. Advice starts as small/medium/big moves, then learns your dial.'],
   ['builtin', 'Built-in grinder', 'Machine with a grinder inside (for example Breville Barista Express). Treated as numbered settings.'],
 ];
+
+const FILL_EXPLAINER = `
+  <h3>Fill the basket for your coffee</h3>
+  <p>Beans differ in density. Light roasts take up less space than dark roasts, even when the weight is the same.</p>
+  <p>After a firm, level tamp, the puck should sit a small, even distance below the shower screen. It should neither touch the screen nor leave a big empty space above it.</p>
+  <p>Too little coffee, and the shot can run fast and thin, and the puck is easier to disturb.</p>
+  <p>Too much coffee presses the puck against the screen. The shot can run slow and be hard to read.</p>`;
 
 function setupView() {
   const p = state.profile;
@@ -86,6 +93,7 @@ function setupView() {
         ${['unknown', 'conical', 'flat'].map((b) => `<button type="button" role="radio" aria-checked="${p.burr === b}" class="${p.burr === b ? 'on' : ''}" data-action="set-burr" data-value="${b}">${cap(b === 'unknown' ? "Not sure" : b)}</button>`).join('')}
       </div>
       <p class="muted small">${esc(learned)}</p>
+      <div class="explainer">${FILL_EXPLAINER}</div>
       ${p.sensitivity > 0 ? '<button type="button" class="link" data-action="reset-cal">Reset learned grinder data</button>' : ''}
       <button type="button" class="btn primary" data-action="finish-setup">${p.onboarded ? 'Done' : 'Start dialing in'}</button>
     </section>`;
@@ -148,6 +156,11 @@ function dialView() {
       </div>
       <button type="button" class="btn ghost" data-action="timer" id="timer-btn">${timerLabel}</button>
       <p class="muted small">Ratio 1:${(num(f.yield) / num(f.dose) || 0).toFixed(1)}. Target time for this ratio is about ${Math.round(win.lo)}-${Math.round(win.hi)}s.</p>
+      ${select('fill', 'Fill check (optional)', [['unchecked', "Didn't check"], ['level', 'Looked right'], ['under', 'Under-filled'], ['over', 'Over-filled']])}
+      <details>
+        <summary>How to fill the basket</summary>
+        <div class="explainer">${FILL_EXPLAINER}</div>
+      </details>
       <details>
         <summary>Prep and machine</summary>
         <div class="grid">
@@ -163,6 +176,7 @@ function dialView() {
       <p class="muted small">Pick everything you notice.</p>
       <h3 class="g-under">Sour side</h3><div class="chips">${TASTE.under.map(chip).join('')}</div>
       <h3 class="g-over">Bitter side</h3><div class="chips">${TASTE.over.map(chip).join('')}</div>
+      <h3 class="g-over">Could be either</h3><div class="chips">${TASTE.neutral.map(chip).join('')}</div>
       <h3 class="g-bal">Good notes (${f.roast} roast)</h3><div class="chips">${balancedNotes(f.roast).map(chip).join('')}</div>
       <h3 class="g-body">Body</h3><div class="chips">${[...TASTE.body.weak, ...TASTE.body.optimal, ...TASTE.body.heavy].map(chip).join('')}</div>
       <button type="button" class="btn primary" data-action="diagnose">Diagnose shot</button>
@@ -170,7 +184,7 @@ function dialView() {
     ${state.result ? resultView() : ''}`;
 }
 
-const TYPE_LABEL = { grind: 'Grind', yield: 'Shot length', prep: 'Puck prep', revert: 'Grind', hold: 'Done' };
+const TYPE_LABEL = { grind: 'Grind', yield: 'Shot length', prep: 'Puck prep', revert: 'Grind', hold: 'Done', dose: 'Dose', check: 'Check' };
 
 // Needle position on the sour-bitter gauge, -1 (sour) to +1 (bitter). Mixed or balanced reads centre;
 // the channeling banner explains mixed.
@@ -213,7 +227,7 @@ function resultView() {
     <section class="card result" id="result" aria-live="polite">
       <div class="rule"></div>
       <h2>Next move</h2>
-      ${r.channeling ? '<p class="banner">Channeling is likely: water is bypassing part of the puck.</p>' : ''}
+      ${r.channeling ? `<p class="banner">${r.channelling.level === 'strong' ? 'Strong channelling signals' : 'Channelling is likely'}: water may be bypassing part of the puck. This is a likely cause, not a diagnosis.</p>` : ''}
       ${gaugeSvg(r)}
       <div class="bezel">
         <div><small>Time</small><b>${timeTxt}</b></div>
@@ -314,6 +328,7 @@ function saveShot() {
     dose: shot.dose, yield: shot.yield, ratio: result.ratio,
     grind: fin(shot.grind), time: fin(shot.time), temp: shot.temp, prep: shot.prep, screen: shot.screen,
     notes: shot.notes, dir: result.dir, top: result.primary.headline,
+    cls: result.cls, lever: result.lever, tried: result.tried, fill: shot.fill || 'unchecked',
   };
   state.profile.sensitivity = learnSensitivity(prev, entry, state.profile);
   if (result.lockIn) state.profile.prefRatio = learnRatio(state.profile, result.ratio);
@@ -324,7 +339,7 @@ function saveShot() {
   const next = nextShotFrom(shot, result.primary);
   state.form = {
     ...f, dose: next.dose, yield: next.yield, grind: next.grind == null || Number.isNaN(next.grind) ? '' : next.grind,
-    time: '', prep: next.prep, screen: next.screen,
+    time: '', prep: next.prep, screen: next.screen, fill: 'unchecked',
   };
   state.notes = new Set();
   state.result = null;
@@ -417,7 +432,7 @@ root.addEventListener('change', (e) => {
   if (e.target.type === 'checkbox') { state.form[field] = e.target.checked; return; }
   state.form[field] = e.target.value;
   if (field === 'roast') {
-    const valid = new Set([...TASTE.under, ...TASTE.over, ...balancedNotes(e.target.value), ...TASTE.body.weak, ...TASTE.body.optimal, ...TASTE.body.heavy]);
+    const valid = new Set([...TASTE.under, ...TASTE.over, ...TASTE.neutral, ...balancedNotes(e.target.value), ...TASTE.body.weak, ...TASTE.body.optimal, ...TASTE.body.heavy]);
     state.notes = new Set([...state.notes].filter((n) => valid.has(n)));
     state.result = null;
     render();

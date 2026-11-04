@@ -496,10 +496,9 @@ export function diagnose({ shot, profile = DEFAULT_PROFILE, prev: prevIn = null,
   const { rank: _rank, then: ownThen, after: _after, ...primary } = first;
   if (notApplied && primary.key && primary.key === prev.lever) primary.detail = `Last time’s change wasn’t made. ${primary.detail}`;
   const second = rest.find((r) => r.rank < 60);
-  const lowerFirst = (t) => `${t.charAt(0).toLowerCase()}${t.slice(1)}`;
   const then = !second ? ownThen || ''
-    : first.type === 'dose' && second.changes?.grind ? `Then: ${lowerFirst(second.headline)} once the fill looks right.`
-      : second.after || `Then: ${lowerFirst(second.headline)}.`;
+    : first.type === 'dose' && second.changes?.grind ? `${second.headline} once the fill looks right.`
+      : second.after || `${second.headline}.`;
   for (const r of rest.filter((x) => x.rank >= 60).slice(0, 2)) notes.push({ kind: 'info', text: `${r.headline}. ${r.detail}` });
 
   if (taste.minor) {
