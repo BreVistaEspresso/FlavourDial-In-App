@@ -143,7 +143,7 @@ function dialView() {
   const win = timeWindow(num(f.yield) / num(f.dose));
   const timerLabel = state.timer.running ? 'Stop timer' : 'Start timer';
   return `
-    <section class="card">
+    <section class="card g-coffee">
       <h2>1. Coffee</h2>
       <div class="grid">
         <div class="field"><label for="f-roaster">Roaster</label><input id="f-roaster" data-field="roaster" value="${esc(f.roaster)}" placeholder="e.g. Onyx" autocomplete="off"></div>
@@ -153,7 +153,7 @@ function dialView() {
       ${prev ? `<p class="muted small">Last shot of this coffee: grind ${prev.grind ?? '?'}, ${prev.time ?? '?'}s, ${esc(prev.top)}.</p>` : ''}
     </section>
 
-    <section class="card">
+    <section class="card g-shot">
       <h2>2. Shot</h2>
       ${state.error ? `<p class="error" role="alert">${esc(state.error)}</p>` : ''}
       <div class="grid">
@@ -184,7 +184,7 @@ function dialView() {
       </div>
     </section>
 
-    <section class="card">
+    <section class="card g-taste">
       <h2>3. Taste</h2>
       <p class="muted small">Pick everything you notice.</p>
       <h3 class="g-under">Sour side</h3><div class="chips">${TASTE.under.map(chip).join('')}</div>

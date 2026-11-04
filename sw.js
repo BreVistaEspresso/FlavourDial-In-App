@@ -1,5 +1,5 @@
 // Offline app shell. Bump CACHE when any cached file changes so installed copies update.
-const CACHE = 'brevista-dialin-v8';
+const CACHE = 'brevista-dialin-v9';
 const SHELL = [
   './',
   './index.html',

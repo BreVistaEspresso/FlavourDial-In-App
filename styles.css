@@ -253,8 +253,102 @@ summary { min-height: 44px; display: flex; align-items: center; cursor: pointer;
   border: 1px solid var(--line); border-radius: 14px; background: var(--field); color: var(--text); font: inherit; cursor: pointer; text-align: left;
 }
 .toggle-row > span:first-child { font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
-.switch { position: relative; flex: none; width: 48px; height: 28px; border-radius: 999px; background: var(--chip-line); transition: background .15s; }
+.switch { position: relative; flex: none; width: 48px; height: 28px; border-radius: 999px; background: var(--sw, var(--chip-line)); transition: background .15s; }
 .switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.3); transition: transform .15s; }
 .toggle-row[aria-checked="true"] .switch { background: var(--chip-on-bg); }
 .toggle-row[aria-checked="true"] .switch::after { transform: translateX(20px); }
 @media (prefers-reduced-motion: reduce) { .d-chev, .switch, .switch::after { transition: none; } }
+
+/* ---- glass sections: Coffee frosted, Shot instrument glass, Taste tinted tray with pearl chips ---- */
+body {
+  background:
+    radial-gradient(500px 440px at 90% 4%, rgba(125, 55, 160, .42), transparent 70%),
+    radial-gradient(520px 520px at 6% 38%, rgba(70, 90, 150, .38), transparent 70%),
+    radial-gradient(560px 520px at 94% 74%, rgba(225, 150, 170, .40), transparent 70%),
+    radial-gradient(380px 320px at 10% 98%, rgba(245, 158, 11, .20), transparent 70%),
+    var(--bg);
+  background-attachment: fixed;
+}
+.g-coffee, .g-shot, .g-taste {
+  position: relative; background: var(--glass); border-color: var(--gline); box-shadow: var(--shadow);
+  -webkit-backdrop-filter: blur(var(--blur, 18px)) saturate(1.5); backdrop-filter: blur(var(--blur, 18px)) saturate(1.5);
+}
+.g-coffee {
+  --blur: 14px; --glass: rgba(255, 255, 255, .50); --gline: rgba(255, 255, 255, .75); --solid: #F6F1F8;
+  --shadow: 0 6px 22px rgba(60, 30, 80, .12);
+  --field: rgba(255, 255, 255, .65); --line: rgba(62, 31, 71, .28); --card: #fff; --chip-line: rgba(62, 31, 71, .28);
+}
+.g-shot {
+  --blur: 24px; --solid: #E7E2EE;
+  --glass: linear-gradient(180deg, rgba(255, 255, 255, .38), rgba(210, 205, 225, .30) 40%, rgba(120, 110, 150, .26));
+  --gline: rgba(255, 255, 255, .35);
+  --field: rgba(35, 25, 55, .10); --line: rgba(40, 25, 60, .30); --card: rgba(35, 25, 55, .08); --chip-line: rgba(40, 25, 60, .30);
+  --fsh: inset 0 3px 6px rgba(35, 20, 55, .28), inset 0 -1px 0 rgba(255, 255, 255, .7);
+  --psh: inset 0 2px 4px rgba(35, 20, 55, .22), inset 0 -1px 0 rgba(255, 255, 255, .6);
+  --shadow: inset 0 2px 0 rgba(255, 255, 255, .85), inset 0 -3px 10px rgba(40, 20, 70, .25), inset 0 0 0 5px rgba(255, 255, 255, .14), 0 1px 0 rgba(255, 255, 255, .7), 0 10px 30px rgba(50, 30, 80, .22);
+  --sw: #8f86a0;
+}
+.g-shot::before {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1.5px; pointer-events: none;
+  background: linear-gradient(150deg, rgba(255, 255, 255, .95), rgba(255, 255, 255, 0) 35%, rgba(255, 255, 255, 0) 65%, rgba(255, 255, 255, .6));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude;
+}
+.g-shot::after {
+  content: ""; position: absolute; left: 14px; right: 14px; top: 3px; height: 34%; pointer-events: none;
+  border-radius: 16px 16px 60% 60% / 16px 16px 14px 14px; background: linear-gradient(180deg, rgba(255, 255, 255, .35), rgba(255, 255, 255, 0));
+}
+.g-shot > * { position: relative; z-index: 1; }
+.g-shot input, .g-shot select, .g-shot .stepper button, .g-shot .toggle-row, .g-shot .disclosure > summary { box-shadow: var(--fsh); }
+.g-shot .pill-opt { box-shadow: var(--psh); }
+.g-shot .pill-opt.on { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .3), 0 2px 5px rgba(40, 20, 60, .35); }
+.g-shot .stepper input { font-size: 24px; }
+.g-taste {
+  --blur: 16px; --solid: #FBEFF3; border-radius: 26px;
+  --glass: linear-gradient(rgba(240, 170, 190, .22), rgba(240, 170, 190, .22)), rgba(255, 250, 252, .5);
+  --gline: rgba(255, 255, 255, .8); --accent-text: #7A1D3F; --chip-on-bg: #7A1D3F; --chip-on-text: #fff;
+  --shadow: 0 8px 24px rgba(150, 60, 90, .16), inset 0 1px 0 #fff;
+}
+.g-taste .chips { padding: 10px; gap: 9px; border-radius: 22px; background: rgba(150, 60, 90, .09); box-shadow: inset 0 2px 6px rgba(120, 40, 70, .18), inset 0 -1px 0 rgba(255, 255, 255, .8); }
+.g-taste .chip {
+  border: 1px solid rgba(255, 255, 255, .9); color: #3a1420;
+  background: radial-gradient(circle at 30% 22%, #fff 0, #fbf3f6 40%, #e8d6de 100%);
+  box-shadow: 0 2px 4px rgba(110, 40, 70, .25), inset 0 -2px 3px rgba(150, 80, 110, .2);
+}
+.g-taste .chip.on {
+  color: #fff; border-color: #5c1230;
+  background: radial-gradient(circle at 30% 22%, #b04a72 0, #7A1D3F 55%, #55102b 100%);
+  box-shadow: 0 2px 5px rgba(80, 20, 45, .5), inset 0 -2px 3px rgba(0, 0, 0, .25);
+}
+.g-taste .btn.primary { border-radius: 999px; box-shadow: 0 0 0 3px rgba(245, 158, 11, .35); }
+
+@media (prefers-color-scheme: dark) {
+  body {
+    background:
+      radial-gradient(520px 420px at 8% 3%, rgba(150, 80, 190, .38), transparent 70%),
+      radial-gradient(520px 520px at 96% 30%, rgba(70, 125, 200, .36), transparent 70%),
+      radial-gradient(560px 520px at 6% 66%, rgba(200, 80, 120, .30), transparent 70%),
+      radial-gradient(420px 360px at 92% 97%, rgba(245, 158, 11, .14), transparent 70%),
+      var(--bg);
+    background-attachment: fixed;
+  }
+  .g-coffee, .g-shot, .g-taste {
+    --glass: linear-gradient(var(--tint), var(--tint)), rgba(24, 30, 38, .58); --field: rgba(10, 14, 18, .38); --card: rgba(10, 14, 18, .28);
+    --shadow: 0 10px 30px rgba(0, 0, 0, .35), inset 0 1px 0 rgba(255, 255, 255, .12);
+  }
+  .g-coffee { --tint: rgba(175, 115, 210, .20); --accent-text: #EBD4F5; --chip-on-bg: #E4CBF0; --chip-on-text: #2B1432; --gline: rgba(200, 150, 230, .40); --line: rgba(200, 160, 225, .38); --chip-line: rgba(200, 160, 225, .38); --sw: #5c5266; --solid: #27202d; }
+  .g-shot { --tint: rgba(105, 160, 225, .20); --accent-text: #D3E4FA; --chip-on-bg: #CFE1F8; --chip-on-text: #13243b; --gline: rgba(140, 185, 235, .42); --line: rgba(140, 185, 235, .38); --chip-line: rgba(140, 185, 235, .38); --sw: #4d5a6b; --solid: #202a36; --fsh: none; --psh: none; }
+  .g-shot::before, .g-shot::after { display: none; }
+  .g-shot .pill-opt.on { box-shadow: none; }
+  .g-taste { --tint: rgba(235, 125, 160, .18); --accent-text: #F9D6E1; --chip-on-bg: #F6CDDA; --chip-on-text: #3a1020; --gline: rgba(240, 150, 180, .42); --line: rgba(240, 160, 185, .38); --chip-line: rgba(240, 160, 185, .38); --sw: #6b5059; --solid: #2e2127; }
+  .g-taste .chips { background: rgba(0, 0, 0, .28); box-shadow: inset 0 3px 8px rgba(0, 0, 0, .55), inset 0 -1px 0 rgba(255, 255, 255, .1); }
+  .g-taste .chip { color: #F3E8EC; border-color: rgba(255, 255, 255, .28); background: radial-gradient(circle at 30% 22%, #6a5560 0, #43363d 55%, #2a2126 100%); box-shadow: 0 2px 4px rgba(0, 0, 0, .5), inset 0 1px 0 rgba(255, 255, 255, .2); }
+  .g-taste .chip.on { color: #3a1020; border-color: #fff; background: radial-gradient(circle at 30% 22%, #fff 0, #F6CDDA 50%, #d99ab0 100%); box-shadow: 0 2px 5px rgba(0, 0, 0, .5), inset 0 -2px 3px rgba(120, 40, 70, .3); }
+  .g-taste .btn.primary { box-shadow: none; }
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .g-coffee, .g-shot, .g-taste { background: var(--solid); }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .g-coffee, .g-shot, .g-taste { background: var(--solid); -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+.stepper input::placeholder { font-family: var(--font-body); font-size: 12px; font-weight: 500; }
