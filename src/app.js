@@ -61,6 +61,14 @@ const GRINDERS = [
   ['builtin', 'Built-in grinder', 'Machine with a grinder inside (for example Breville Barista Express). Treated as numbered settings.'],
 ];
 
+const ICON = (d) => `<svg class="pi" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+const PREP_OPTIONS = [
+  ['tamp', 'Tamp Only', ICON('<rect x="4" y="15" width="16" height="5" rx="1.5"/><path d="M12 15V4M8 4h8"/>')],
+  ['wdt_tamp', '+WDT', ICON('<path d="M12 3v12M7 5l1.5 10M17 5l-1.5 10M12 15v6"/>')],
+  ['shaker_tamp', '+Blind Shaker', ICON('<path d="M5 7h14l-2 12H7z"/><path d="M9 11v.01M12 14v.01M15 11v.01M12 10v.01"/>')],
+  ['shaker_wdt_tamp', '+Both', ICON('<path d="M5 6h14l-2 9H7z"/><path d="M12 15v6M9 15l.5 4M15 15l-.5 4"/>')],
+];
+
 const FILL_EXPLAINER = `
   <h3>Fill the basket for your coffee</h3>
   <p>Beans differ in density. Light roasts take up less space than dark roasts, even when the weight is the same.</p>
@@ -135,7 +143,7 @@ function dialView() {
   const win = timeWindow(num(f.yield) / num(f.dose));
   const timerLabel = state.timer.running ? 'Stop timer' : 'Start timer';
   return `
-    <section class="card">
+    <section class="card g-coffee">
       <h2>1. Coffee</h2>
       <div class="grid">
         <div class="field"><label for="f-roaster">Roaster</label><input id="f-roaster" data-field="roaster" value="${esc(f.roaster)}" placeholder="e.g. Onyx" autocomplete="off"></div>
@@ -145,7 +153,7 @@ function dialView() {
       ${prev ? `<p class="muted small">Last shot of this coffee: grind ${prev.grind ?? '?'}, ${prev.time ?? '?'}s, ${esc(prev.top)}.</p>` : ''}
     </section>
 
-    <section class="card">
+    <section class="card g-shot">
       <h2>2. Shot</h2>
       ${state.error ? `<p class="error" role="alert">${esc(state.error)}</p>` : ''}
       <div class="grid">
@@ -156,22 +164,27 @@ function dialView() {
       </div>
       <button type="button" class="btn ghost" data-action="timer" id="timer-btn">${timerLabel}</button>
       <p class="muted small">Ratio 1:${(num(f.yield) / num(f.dose) || 0).toFixed(1)}. Target time for this ratio is about ${Math.round(win.lo)}-${Math.round(win.hi)}s.</p>
-      ${select('fill', 'Fill check (optional)', [['unchecked', "Didn't check"], ['level', 'Looked right'], ['under', 'Under-filled'], ['over', 'Over-filled']])}
-      <details>
-        <summary>How to fill the basket</summary>
+      ${select('fill', 'Dose check - Basket fill (optional)', [['unchecked', "Didn't check"], ['level', 'Looked right'], ['under', 'Under-filled'], ['over', 'Over-filled']])}
+      <details class="disclosure">
+        <summary><span class="d-icon" aria-hidden="true">i</span>How to fill the basket<span class="d-chev" aria-hidden="true"></span></summary>
         <div class="explainer">${FILL_EXPLAINER}</div>
       </details>
-      <details>
-        <summary>Prep and machine</summary>
-        <div class="grid">
-          ${select('prep', 'Puck prep', [['tamp', 'Grind and tamp'], ['wdt_tamp', 'WDT + tamp'], ['shaker_tamp', 'Blind shaker + tamp'], ['shaker_wdt_tamp', 'Shaker + WDT + tamp']])}
-          <div class="field check"><label for="f-screen">Puck screen</label><input id="f-screen" type="checkbox" data-field="screen" ${f.screen ? 'checked' : ''}></div>
-          ${select('temp', 'Brew temperature', [['fixed', 'Not adjustable / unsure'], ['low', 'Set low (91°C or less)'], ['medium', 'Set standard'], ['high', 'Set high (93°C+)']])}
+      <div class="prep-temp">
+        <h3>Prep and Temp</h3>
+        <div class="field prep-field">
+          <span class="lbl" id="prep-label">Puck prep</span>
+          <div class="pills" role="radiogroup" aria-labelledby="prep-label">
+            ${PREP_OPTIONS.map(([v, t, icon]) => `<button type="button" class="pill-opt ${f.prep === v ? 'on' : ''}" role="radio" aria-checked="${f.prep === v}" data-action="pick" data-field="prep" data-value="${v}">${icon}${t}</button>`).join('')}
+          </div>
         </div>
-      </details>
+        <button type="button" class="toggle-row" role="switch" aria-checked="${Boolean(f.screen)}" data-action="toggle" data-field="screen">
+          <span>Puck screen</span><span class="switch" aria-hidden="true"></span>
+        </button>
+        ${select('temp', 'Brew temperature', [['fixed', 'Not adjustable / unsure'], ['low', 'Set low (91°C or less)'], ['medium', 'Set standard'], ['high', 'Set high (93°C+)']])}
+      </div>
     </section>
 
-    <section class="card">
+    <section class="card g-taste">
       <h2>3. Taste</h2>
       <p class="muted small">Pick everything you notice.</p>
       <h3 class="g-under">Sour side</h3><div class="chips">${TASTE.under.map(chip).join('')}</div>
@@ -405,6 +418,20 @@ root.addEventListener('click', (e) => {
       const next = Math.round(((num(input.value) || 0) + Number(delta)) * 10) / 10;
       input.value = String(Math.max(0, next));
       state.form[field] = input.value;
+      break;
+    }
+    case 'pick': {
+      state.form[field] = value;
+      el.closest('.pills').querySelectorAll('.pill-opt').forEach((b) => {
+        const on = b === el;
+        b.classList.toggle('on', on);
+        b.setAttribute('aria-checked', String(on));
+      });
+      break;
+    }
+    case 'toggle': {
+      state.form[field] = !state.form[field];
+      el.setAttribute('aria-checked', String(Boolean(state.form[field])));
       break;
     }
     case 'timer': toggleTimer(); break;
