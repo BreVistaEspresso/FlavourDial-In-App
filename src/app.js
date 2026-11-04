@@ -169,8 +169,8 @@ function dialView() {
         <summary><span class="d-icon" aria-hidden="true">i</span>How to fill the basket<span class="d-chev" aria-hidden="true"></span></summary>
         <div class="explainer">${FILL_EXPLAINER}</div>
       </details>
-      <details class="disclosure">
-        <summary><span class="d-icon" aria-hidden="true">⚙</span>Prep and Temp<span class="d-chev" aria-hidden="true"></span></summary>
+      <div class="prep-temp">
+        <h3>Prep and Temp</h3>
         <div class="field prep-field">
           <span class="lbl" id="prep-label">Puck prep</span>
           <div class="pills" role="radiogroup" aria-labelledby="prep-label">
@@ -181,7 +181,7 @@ function dialView() {
           <span>Puck screen</span><span class="switch" aria-hidden="true"></span>
         </button>
         ${select('temp', 'Brew temperature', [['fixed', 'Not adjustable / unsure'], ['low', 'Set low (91°C or less)'], ['medium', 'Set standard'], ['high', 'Set high (93°C+)']])}
-      </details>
+      </div>
     </section>
 
     <section class="card">
