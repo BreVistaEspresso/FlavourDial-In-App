@@ -8,6 +8,7 @@ import {
   nextShotFrom,
   learnSensitivity,
   learnRatio,
+  startRatio,
 } from '../src/engine.js';
 
 const shot = (over = {}) => ({
@@ -37,15 +38,20 @@ test('sour + fast shot: grind finer (regression: fast threshold used to be read 
   assert.equal(r.primary.changes.grind.to, 10 - r.primary.changes.grind.steps);
 });
 
-test('bitter + fast shot flags channeling and fixes prep, not grind', () => {
-  const r = diagnose({ shot: shot({ time: 18, notes: ['bitter'] }), profile: stepped });
-  assert.equal(r.channeling, true);
-  assert.equal(r.primary.type, 'prep');
+test('bitter + fast shot is not channelling: shorter ratio, no prep lever (example 10)', () => {
+  const r = diagnose({ shot: shot({ time: 19, notes: ['bitter'], prep: 'shaker_wdt_tamp', screen: true }), profile: stepped });
+  assert.equal(r.channeling, false);
+  assert.equal(r.channelling.level, 'possible');
+  assert.equal(r.primary.type, 'yield');
+  assert.equal(r.primary.changes.yield.to, 31.5);
 });
 
-test('sour + slow shot does not say grind finer', () => {
-  const r = diagnose({ shot: shot({ time: 40 }), profile: stepped });
-  assert.equal(r.primary.type, 'prep');
+test('sour + slow: no grind finer, longer ratio plus an "unusual" note, not channelling (example 8)', () => {
+  const r = diagnose({ shot: shot({ time: 36 }), profile: stepped });
+  assert.equal(r.channeling, false);
+  assert.equal(r.primary.type, 'yield');
+  assert.equal(r.primary.changes.yield.to, 40.5);
+  assert.ok(r.notes.some((n) => /slow and sour/i.test(n.text)));
 });
 
 test('sour + slow with maxed prep falls back to a longer shot', () => {
@@ -79,13 +85,14 @@ test('dark roast bitter in range: shorten the shot (one change, no stacked advic
   assert.equal(r.primary.changes.grind, undefined);
 });
 
-test('mixed sour + bitter: fix prep first, then slow-feed when prep is maxed', () => {
-  const a = diagnose({ shot: shot({ notes: ['sour', 'bitter'] }), profile: stepped });
-  assert.equal(a.primary.type, 'prep');
-  assert.equal(a.primary.changes.screen, true); // WDT already used, so the next upgrade is a puck screen
-  const b = diagnose({ shot: shot({ notes: ['sour', 'bitter'], prep: 'wdt_tamp', screen: true }), profile: stepped });
-  assert.equal(b.primary.type, 'prep');
-  assert.match(b.primary.headline, /Slow-feed/);
+test('mixed in window, ratio in range: likely channelling, shaker is rung 2 (example 5)', () => {
+  const r = diagnose({ shot: shot({ notes: ['sour', 'bitter'] }), profile: stepped });
+  assert.equal(r.channelling.level, 'likely');
+  assert.equal(r.channeling, true);
+  assert.equal(r.primary.type, 'prep');
+  assert.equal(r.primary.key, 'prep:shaker');
+  assert.equal(r.primary.changes.prep, 'shaker_wdt_tamp');
+  assert.match(r.primary.detail, /not a diagnosis/);
 });
 
 test('mixed notes on a slow shot are treated as choking, so grind coarser', () => {
@@ -184,4 +191,193 @@ test('nextShotFrom applies the change and clears time and notes', () => {
 test('learnRatio blends toward the locked-in ratio', () => {
   assert.equal(learnRatio({ prefRatio: null }, 2.2), 2.2);
   assert.equal(learnRatio({ prefRatio: 2 }, 2.5), 2.2);
+});
+
+/* ---------- algorithm v2 (docs/ALGORITHM.md) ---------- */
+
+const DAY = 24 * 3600 * 1000;
+const ago = (days) => new Date(Date.now() - days * DAY).toISOString();
+
+test('salty alone reads balanced: lock it in (example 1)', () => {
+  const r = diagnose({ shot: shot({ notes: ['salty'] }), profile: stepped });
+  assert.equal(r.lockIn, true);
+});
+
+test('salty never offsets a real off-note (example 3)', () => {
+  const r = diagnose({ shot: shot({ notes: ['sour', 'salty'], time: 20 }), profile: stepped });
+  assert.equal(r.taste.dir, 'under');
+  assert.equal(r.primary.changes.grind.dir, 'finer');
+});
+
+test('salty + heavy with a short ratio: lengthen to the roast low (example 2)', () => {
+  const r = diagnose({ shot: shot({ yield: 28, time: 24, notes: ['salty', 'heavy'] }), profile: stepped });
+  assert.equal(r.primary.type, 'yield');
+  assert.equal(r.primary.changes.yield.to, 31.5);
+  assert.equal(r.primary.changes.grind, undefined);
+});
+
+test('choking bitter shot: large coarser step, labelled (example 7)', () => {
+  const r = diagnose({ shot: shot({ time: 41, notes: ['bitter'] }), profile: stepped });
+  assert.match(r.primary.headline, /choking/);
+  assert.equal(r.primary.changes.grind.steps, 3);
+});
+
+test('mixed + fast + shaker/WDT/screen missing: strong channelling, prep leads, grind held (example 4)', () => {
+  const r = diagnose({ shot: shot({ notes: ['sour', 'sour', 'bitter'], time: 19, prep: 'wdt_tamp', screen: true }), profile: stepped });
+  assert.equal(r.channelling.level, 'strong');
+  assert.equal(r.primary.key, 'prep:shaker');
+  assert.match(r.then, /only if still off/);
+});
+
+test('mixed + slow: grind coarser leads, prep rung follows (example 6)', () => {
+  const r = diagnose({ shot: shot({ notes: ['sour', 'bitter'], time: 36 }), profile: stepped });
+  assert.equal(r.primary.changes.grind.dir, 'coarser');
+  assert.match(r.then, /prep/i);
+});
+
+test('sour + fast alone is possible, not channelling: grind finer, prep as a note (example 9)', () => {
+  const r = diagnose({ shot: shot({ time: 19 }), profile: stepped });
+  assert.equal(r.channelling.level, 'possible');
+  assert.equal(r.primary.changes.grind.dir, 'finer');
+  assert.ok(r.notes.some((n) => /shaker/i.test(n.text)));
+});
+
+test('ladder exhausted: escalate to a small grind step (example 11)', () => {
+  const prev = { lever: 'prep:slowfeed', cls: 'mixed', dir: 'mixed', prep: 'shaker_wdt_tamp', screen: true, dose: 18, yield: 36, grind: 10 };
+  const r = diagnose({ shot: shot({ notes: ['sour', 'bitter'], prep: 'shaker_wdt_tamp', screen: true }), profile: stepped, prev });
+  assert.equal(r.primary.type, 'grind');
+  assert.match(r.primary.detail, /different bag/);
+});
+
+test('ladder walks WDT, shaker, screen, slow-feed', () => {
+  const key = (over) => diagnose({ shot: shot({ notes: ['sour', 'bitter'], ...over }), profile: stepped }).primary.key;
+  assert.equal(key({ prep: 'tamp' }), 'prep:wdt');
+  assert.equal(key({ prep: 'wdt_tamp' }), 'prep:shaker');
+  assert.equal(key({ prep: 'shaker_wdt_tamp' }), 'prep:screen');
+  assert.equal(key({ prep: 'shaker_wdt_tamp', screen: true }), 'prep:slowfeed');
+});
+
+test('memory: advice not applied is repeated and said so (example 12)', () => {
+  const prev = { lever: 'grind:finer', cls: 'under', dir: 'under', grind: 10, dose: 18, yield: 36, prep: 'wdt_tamp', ts: ago(1) };
+  const r = diagnose({ shot: shot({ time: 20 }), profile: stepped, prev });
+  assert.equal(r.primary.changes.grind.dir, 'finer');
+  assert.match(r.primary.detail, /wasn’t made/);
+});
+
+test('memory: applied but no better crosses the lever off; grind goes one size up (example 13)', () => {
+  const prev = { lever: 'grind:finer', cls: 'under', dir: 'under', grind: 10, dose: 18, yield: 36, prep: 'wdt_tamp', ts: ago(1) };
+  const cur = shot({ grind: 9, time: 21 });
+  const first = diagnose({ shot: cur, profile: stepped });
+  const r = diagnose({ shot: cur, profile: stepped, prev });
+  assert.deepEqual(r.tried, ['grind:finer']);
+  assert.ok(r.primary.changes.grind.steps > first.primary.changes.grind.steps);
+  const again = diagnose({ shot: shot({ grind: 7, time: 22 }), profile: stepped, prev: { ...prev, grind: 9, tried: ['grind:finer'] } });
+  assert.deepEqual(again.tried, ['grind:finer', 'grind:finer']);
+  assert.notEqual(again.primary.key, 'grind:finer');
+});
+
+test('memory: applied and improved keeps the lever (example 14)', () => {
+  const prev = { lever: 'prep:shaker', cls: 'mixed', dir: 'mixed', prep: 'wdt_tamp', dose: 18, yield: 36, grind: 10, ts: ago(1) };
+  const r = diagnose({ shot: shot({ prep: 'shaker_wdt_tamp', notes: ['sour'], time: 20 }), profile: stepped, prev });
+  assert.deepEqual(r.tried, []);
+  assert.ok(r.notes.some((n) => /improved/.test(n.text)));
+});
+
+test('overshoot beats memory and is never crossed off (example 15)', () => {
+  const prev = { lever: 'grind:finer', cls: 'under', dir: 'under', grind: 10, time: 22, dose: 18, yield: 36, ts: ago(1) };
+  const r = diagnose({ shot: shot({ grind: 8, time: 30, notes: ['bitter'] }), profile: stepped, prev });
+  assert.equal(r.primary.type, 'revert');
+  assert.equal(r.primary.changes.grind.to, 9);
+  assert.deepEqual(r.tried, []);
+});
+
+test('memory expires after 7 days (example 19)', () => {
+  const prev = { lever: 'grind:finer', cls: 'under', dir: 'under', grind: 10, dose: 18, yield: 36, prep: 'wdt_tamp', ts: ago(8) };
+  const r = diagnose({ shot: shot({ time: 20 }), profile: stepped, prev });
+  assert.doesNotMatch(r.primary.detail, /wasn’t made/);
+});
+
+test('ratio clamps to the roast range (example 16)', () => {
+  const dark = diagnose({ shot: shot({ roast: 'dark', notes: ['bitter'], time: 28, temp: 'fixed' }), profile: stepped });
+  assert.equal(dark.primary.changes.yield.to, 31.5);
+  const light = diagnose({ shot: shot({ roast: 'light', notes: ['sour'], time: 31 }), profile: stepped });
+  assert.equal(light.primary.changes.yield.to, 45);
+  const atEdge = diagnose({ shot: shot({ yield: 31.5, notes: ['bitter'], time: 30 }), profile: stepped });
+  assert.equal(atEdge.primary.changes.yield, undefined);
+  assert.equal(atEdge.primary.changes.grind.dir, 'coarser');
+});
+
+test('start ratio is clamped into the roast range (example 17)', () => {
+  assert.equal(startRatio(DEFAULT_PROFILE, 'dark'), 1.75);
+  assert.equal(startRatio(DEFAULT_PROFILE, 'medium'), 2);
+  assert.equal(startRatio(DEFAULT_PROFILE, 'light'), 2.5);
+  assert.equal(startRatio({ ...DEFAULT_PROFILE, prefRatio: 2 }, 'dark'), 1.75);
+});
+
+test('a balanced shot outside the range is still locked in (example 18)', () => {
+  const r = diagnose({ shot: shot({ roast: 'dark', notes: ['chocolate'] }), profile: stepped });
+  assert.equal(r.lockIn, true);
+});
+
+test('fill under + sour + fast: raise dose 0.5 g, ratio kept, dose outranks grind (example 20)', () => {
+  const r = diagnose({ shot: shot({ time: 19, fill: 'under' }), profile: stepped });
+  assert.equal(r.primary.type, 'dose');
+  assert.equal(r.primary.changes.dose.to, 18.5);
+  assert.equal(r.primary.changes.yield.to, 37);
+  assert.match(r.then, /fill looks right/);
+  assert.equal(r.channelling.level, 'possible');
+});
+
+test('fill over + bitter + slow: lower dose 0.5 g (example 21)', () => {
+  const r = diagnose({ shot: shot({ time: 36, notes: ['bitter'], fill: 'over' }), profile: stepped });
+  assert.equal(r.primary.changes.dose.to, 17.5);
+  assert.equal(r.primary.changes.yield.to, 35);
+});
+
+test('mixed + fast + under-filled: score 6, prep leads, dose follows (example 22)', () => {
+  const r = diagnose({ shot: shot({ notes: ['sour', 'bitter'], time: 19, fill: 'under' }), profile: stepped });
+  assert.equal(r.channelling.score, 6);
+  assert.equal(r.primary.type, 'prep');
+  assert.match(r.then, /dose/i);
+});
+
+test('dose lever is crossed off after two unsuccessful steps (example 23)', () => {
+  const base = { lever: 'dose:raise', cls: 'under', dir: 'under', prep: 'wdt_tamp', yield: 37, grind: 10, ts: ago(1) };
+  const second = diagnose({ shot: shot({ dose: 18.5, yield: 37, time: 20, fill: 'under' }), profile: stepped, prev: { ...base, dose: 18, yield: 36 } });
+  assert.equal(second.primary.changes.dose.to, 19);
+  assert.deepEqual(second.tried, ['dose:raise']);
+  const third = diagnose({ shot: shot({ dose: 19, yield: 38, time: 20, fill: 'under' }), profile: stepped, prev: { ...base, dose: 18.5, tried: ['dose:raise'] } });
+  assert.deepEqual(third.tried, ['dose:raise', 'dose:raise']);
+  assert.notEqual(third.primary.type, 'dose');
+  assert.ok(third.notes.some((n) => /moved 1 g/.test(n.text)));
+});
+
+test('fill unchecked adds one low note; fill level adds none (examples 24, 25)', () => {
+  const un = diagnose({ shot: shot({ time: 19 }), profile: stepped });
+  assert.equal(un.primary.type, 'grind');
+  assert.ok(un.notes.some((n) => /Check your fill/.test(n.text)));
+  const ok = diagnose({ shot: shot({ time: 19, fill: 'level' }), profile: stepped });
+  assert.equal(ok.notes.some((n) => /Check your fill/.test(n.text)), false);
+});
+
+test('thin balanced cup never suggests more dose (example 26)', () => {
+  const r = diagnose({ shot: shot({ notes: ['sweet', 'watery'], yield: 31.5 }), profile: stepped });
+  assert.equal(r.primary.changes.dose, undefined);
+  assert.doesNotMatch(r.primary.detail + r.then, /0\.5 ?g more dose/);
+});
+
+test('nextShotFrom applies dose and yield together and resets fill (example 27)', () => {
+  const s = shot({ time: 19, fill: 'under' });
+  const r = diagnose({ shot: s, profile: stepped });
+  const next = nextShotFrom(s, r.primary);
+  assert.equal(next.dose, 18.5);
+  assert.equal(next.yield, 37);
+  assert.equal(next.fill, 'unchecked');
+});
+
+test('result carries cls, lever and tried for the logbook', () => {
+  const r = diagnose({ shot: shot({ time: 19 }), profile: stepped });
+  assert.equal(r.cls, 'under');
+  assert.equal(r.lever, 'grind:finer');
+  assert.deepEqual(r.tried, []);
 });
