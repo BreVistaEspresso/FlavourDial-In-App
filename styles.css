@@ -222,3 +222,8 @@ summary { min-height: 44px; display: flex; align-items: center; cursor: pointer;
 .toast[hidden] { display: none; }
 
 @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; transition: none !important; animation: none !important; } }
+
+.explainer { margin-top: 8px; padding: 12px 14px; border: 1px solid var(--line, currentColor); border-radius: 10px; }
+.explainer h3 { margin: 0 0 6px; }
+.explainer p { margin: 0 0 8px; font-size: 0.95rem; }
+.explainer p:last-child { margin-bottom: 0; }
